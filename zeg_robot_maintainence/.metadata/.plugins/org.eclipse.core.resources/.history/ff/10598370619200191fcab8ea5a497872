@@ -1,0 +1,55 @@
+#include "zeg_robot_broadcast.hpp"
+#include "udp_unicast_agent.hpp"
+#include "rpc_server.h"
+using namespace zeg_robot_maintainence;
+zeg_robot_broadcast zeg_robot_broadcast_thread;
+bool start_thread() {
+	if (false == zeg_robot_broadcast_thread.init()) {
+		LOG_CRIT << "zeg_robot_broadcast_thread init failed";
+		return false;
+	}
+	zeg_robot_broadcast_thread.run();
+	return true;
+}
+void join_thread() {
+	zeg_robot_broadcast_thread.join();
+}
+char udp_recv_buf[BUFSIZ] = "";
+udp_unicast_agent mock_server;
+void recv_thread() {
+	while (true) {
+		cout << "recv_unicast_return_ack = " << mock_server.recv_unicast_return_ack(udp_recv_buf, "zeg_robot_ack") << endl;
+		cout << "recv = " << udp_recv_buf << endl;
+	}
+}
+void send_thread() {
+	const char *buf = "zeg robot process ok.";
+	while (true) {
+		this_thread::sleep_for(chrono::seconds(1));
+		cout << "send back = " << mock_server.send_back(buf, strlen(buf)) << endl;
+	}
+}
+void send_uniform_pack() {
+	robot_basic_info1 obj0;
+}
+int main() {
+	/*
+	if (false == start_thread()) {
+		return -1;
+	}
+	join_thread();
+*/
+	mock_server.set_port(17789);
+	if (false == mock_server.init()) {
+		cout << "mock server init failed...!" << endl;
+		return -1;
+	}
+	thread th0(recv_thread);
+	thread th1(send_thread);
+	th0.join();
+	th1.join();
+	return 0;
+}
+
+
+

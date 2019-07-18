@@ -1,0 +1,45 @@
+#include "zeg_robot_broadcast.hpp"
+#include "rpc_server.h"
+using namespace rest_rpc;
+using namespace rpc_service;
+zeg_robot_broadcast zeg_robot_broadcast_thread;
+bool start_thread() {
+	if (false == zeg_recv_navigate_thread.init()) {
+		return false;
+	}
+	if (false == zeg_post_navigate_thread.init()) {
+		return false;
+	}
+	zeg_recv_navigate_thread.run();
+	zeg_stat_output_thread.run();
+	zeg_post_navigate_thread.run();
+	return true;
+}
+void join_thread() {
+	zeg_recv_navigate_thread.join();
+	zeg_stat_output_thread.join();
+	zeg_post_navigate_thread.join();
+}
+bool init_object() {
+	if (zeg_report_pose_obj.init()) {
+		return false;
+	}
+	return true;
+}
+int main() {
+	if (false == start_thread()) {
+		return -1;
+	}
+	if (init_object()) {
+		return -1;
+	}
+	rpc_server zeg_report_pose_server(zeg_config::get_instance().RPC_SERVER_REPORT_POSE_PORT, thread::hardware_concurrency(), 0);
+	zeg_report_pose_server.register_handler("report_pose", &zeg_report_pose::report_pose, &zeg_report_pose_obj);
+	zeg_report_pose_server.run();
+	join_thread();
+
+	return 0;
+}
+
+
+

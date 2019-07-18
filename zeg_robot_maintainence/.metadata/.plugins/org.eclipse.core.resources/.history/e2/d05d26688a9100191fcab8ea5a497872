@@ -1,0 +1,4 @@
+[robot_broadcast]
+address=192.168.4.255
+#ms
+interval=100	

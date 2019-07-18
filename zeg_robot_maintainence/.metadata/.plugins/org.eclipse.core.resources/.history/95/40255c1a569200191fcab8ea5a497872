@@ -1,0 +1,81 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <thread>
+#include <chrono>
+#include "doctest.hpp"
+#include "zeg_config.hpp"
+#include "udp_broadcast_agent.hpp"
+#include "udp_unicast_agent.hpp"
+#include "common_utility.hpp"
+#include "zeg_robot_broadcast.hpp"
+using namespace zeg_robot_maintainence;
+TEST_CASE("testing zeg configuration") {
+	CHECK(false == zeg_config::get_instance().robot_broadcast_address.empty());
+	CHECK(zeg_config::get_instance().robot_broadcast_interval > 0);
+}
+void send_broadcast_thread(const char *buf) {
+	this_thread::sleep_for(chrono::milliseconds(100));
+	udp_broadcast_agent client;
+	if (client.init_sock_fd() >= 0) {
+		client.send_broadcast(buf, strlen(buf), zeg_config::get_instance().robot_broadcast_address.c_str());
+	}
+}
+char udp_recv_buf[BUFSIZ] = "";
+void recv_broadcast_thread() {
+	udp_broadcast_agent server;
+	if (server.init()) {
+		server.recv_broadcast(udp_recv_buf);
+	}
+}
+TEST_CASE("testing udp broadcast agent") {
+	udp_broadcast_agent udp_broadcast_agent_obj;
+	udp_broadcast_agent_obj.set_port(8819);
+	REQUIRE(true == udp_broadcast_agent_obj.init());
+	const char *buf = "hello world, I am udp broadcast test.";
+	thread th0(send_broadcast_thread, buf);
+	thread th1(recv_broadcast_thread);
+	th0.join();
+	th1.join();
+	CHECK(0 == strcmp(buf, udp_recv_buf));
+}
+void start_simulator() {
+    run_program(zeg_config::get_instance().robot_test_simulator_path.c_str());
+}
+TEST_CASE("testing get vehicle ids") {
+	thread th(start_simulator);
+	th.detach();
+	this_thread::sleep_for(chrono::milliseconds(1000));
+	zeg_robot_broadcast zeg_robot_broadcast_obj;
+	REQUIRE(true == zeg_robot_broadcast_obj.init());
+	vector<string>ids;
+	CHECK(true == zeg_robot_broadcast_obj.get_vehicle_ids(ids));
+	CHECK(ids.size() > 0);
+	for (auto &id : ids) {
+		cout << "id = " << id << endl;
+	}
+	kill_program(zeg_config::get_instance().robot_test_simulator_name.c_str());
+}
+void send_unicast_thread(const char *buf) {
+	this_thread::sleep_for(chrono::milliseconds(100));
+	udp_unicast_agent client;
+	if (client.init_sock_fd() >= 0) {
+		client.send_unicast(buf, strlen(buf), "127.0.0.1");
+	}
+}
+void recv_unicast_thread() {
+	udp_recv_buf[0] = 0;
+	udp_broadcast_agent server;
+	if (server.init()) {
+		server.recv_unicast(udp_recv_buf);
+	}
+}
+TEST_CASE("testing udp unicast agent") {
+	udp_unicast_agent udp_unicast_agent_obj;
+	udp_unicast_agent_obj.set_port(8890);
+	REQUIRE(true == udp_unicast_agent_obj.init());
+	const char *buf = "hello world, I am udp unicast test.";
+	thread th0(send_unicast_thread, buf);
+	thread th1(recv_unicast_thread);
+	th0.join();
+	th1.join();
+	CHECK(0 == strcmp(buf, udp_recv_buf));
+}

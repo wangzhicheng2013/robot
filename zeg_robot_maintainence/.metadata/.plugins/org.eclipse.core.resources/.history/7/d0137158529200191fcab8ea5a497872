@@ -1,0 +1,26 @@
+#ifndef SRC_MESSAGE_COMMUNICATE_AGENT_HPP_
+#define SRC_MESSAGE_COMMUNICATE_AGENT_HPP_
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <iostream>
+using namespace std;
+class message_communicate_agent {
+public:
+	message_communicate_agent() = default;
+	virtual ~message_communicate_agent() = default;
+public:
+	virtual bool init() = 0;
+	virtual int send_broadcast(const char *buf, int len, const char *broadcast_address) = 0;
+	virtual int recv_broadcast(char *recv_buf) = 0;
+	virtual int send_unicast(const char *buf, int len, const char *broadcast_address) = 0;
+	virtual int recv_unicast(char *recv_buf) = 0;
+};
+
+
+
+#endif /* SRC_MESSAGE_COMMUNICATE_AGENT_HPP_ */

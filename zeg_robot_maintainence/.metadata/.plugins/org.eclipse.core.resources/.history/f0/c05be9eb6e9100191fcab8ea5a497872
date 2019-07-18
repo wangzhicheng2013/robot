@@ -1,0 +1,54 @@
+#ifndef UDP_BROADCAST_SENDER_HPP_
+#define UDP_BROADCAST_SENDER_HPP_
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string>
+using namespace std;
+class udp_broadcast_sender {
+public:
+	udp_broadcast_sender() {
+		sock_fd_ = -1;
+	}
+	~udp_broadcast_sender() {
+		if (sock_fd_ >= 0) {
+			close(sock_fd_);
+		}
+	}
+private:
+	bool init_sock_fd() {
+		sock_fd_ = socket(AF_INET, SOCK_DGRAM, 0);
+		if (sock_fd_ < 0) {
+			return false;
+		}
+		int so_broadcast = 1;
+		if (setsockopt(sock_fd_, SOL_SOCKET, SO_BROADCAST, (char *)&so_broadcast, sizeof(so_broadcast)) < 0) {
+			return false;
+		}
+		return true;
+	}
+	bool bind_sock_fd() {
+		struct sockaddr_in addr = {0};
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = inet_addr(config.ip.c_str());
+		addr.sin_port = htons(config.port);
+			if (bind(sock_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+			{
+				cerr << "socket bind failed on ip = " << config.ip << " port = " << config.port << endl;
+				return -1;
+		}
+		return true;
+	}
+	//const char *broadcast_address
+private:
+	int sock_fd_;
+	int port;
+};
+
+
+
+
+#endif /* UDP_BROADCAST_SENDER_HPP_ */

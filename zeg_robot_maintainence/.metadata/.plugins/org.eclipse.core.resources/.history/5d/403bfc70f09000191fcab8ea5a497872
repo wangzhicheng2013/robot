@@ -1,0 +1,59 @@
+#ifndef SRC_ZEG_CONFIG_HPP_
+#define SRC_ZEG_CONFIG_HPP_
+#include <string>
+#include "NanoLog.hpp"
+#include "config_parser.hpp"
+namespace zeg_robot_maintainence {
+using namespace std;
+class zeg_config {
+private:
+	zeg_config() {
+		init_log();
+		init_conf();
+	}
+	virtual ~zeg_config() = default;
+public:
+	inline static zeg_config &get_instance() {
+		return config_;
+	}
+public:
+	void init_conf() {
+		if (false == config_parser::config_parser::get_instance().init(conf_path)) {
+			return;
+		}
+		vector<string>values{""};
+		config_parser::config_parser::get_instance().get_value("scheduler_server", "pose_report_address", values);
+		pose_report_address = values[0];
+		if (pose_report_address.empty()) {
+			pose_report_address = SCHEDULER_SERVER_SIMULATOR_ADDRESS;
+		}
+		config_parser::config_parser::get_instance().get_value("robot_simulator", "msecs", values);
+		robot_simulator_msecs = atoi(values[0].c_str());
+		check_msecs();
+	}
+private:
+	inline void init_log() {
+		mkdir(zeg_log_path, 777);
+		nanolog::initialize(nanolog::GuaranteedLogger(), zeg_log_path, zeg_log_file , max_log_size);
+		nanolog::set_log_level(nanolog::LogLevel::INFO);
+	}
+	inline void check_interval() {
+		if (robot_broadcast_interval <= 0 || robot_broadcast_interval > 10) {
+			robot_broadcast_interval = 5;
+		}
+	}
+public:
+	static zeg_config config_;
+private:
+	const char *zeg_log_path = "/opt/log";
+	const char *zeg_log_file = "zeg_message_interface_log";
+public:
+	string robot_broadcast_address;
+	int robot_broadcast_interval;
+private:
+	const char *conf_path = "../etc/zeg_robot_maintainence.conf";
+};
+zeg_config zeg_config::config_;
+}
+
+#endif /* SRC_ZEG_CONFIG_HPP_ */

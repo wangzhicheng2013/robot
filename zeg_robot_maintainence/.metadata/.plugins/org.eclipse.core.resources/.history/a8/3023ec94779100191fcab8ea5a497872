@@ -1,0 +1,37 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <thread>
+#include <chrono>
+#include "doctest.hpp"
+#include "zeg_config.hpp"
+#include "udp_broadcast_agent.hpp"
+using namespace zeg_robot_maintainence;
+TEST_CASE("testing zeg configuration") {
+	CHECK("192.168.4.255" == zeg_config::get_instance().robot_broadcast_address);
+	CHECK(5 == zeg_config::get_instance().robot_broadcast_interval);
+}
+void send_broadcast_thread() {
+	this_thread::sleep_for(chrono::milliseconds(100));
+	udp_broadcast_agent client;
+	char buf[64] = "AAA";
+	if (client.init_sock_fd() >= 0) {
+		client.send_broadcast(buf, strlen(buf), zeg_config::get_instance().robot_broadcast_address.c_str());
+	}
+}
+char udp_recv_buf[1024] = "";
+void recv_broadcast_thread() {
+
+	udp_broadcast_agent server;
+	if (server.init()) {
+		server.recv_broadcast(buf);
+	}
+	cout << "111 = " << buf << endl;
+}
+TEST_CASE("testing udp broadcast agent") {
+	udp_broadcast_agent udp_broadcast_agent_obj;
+	udp_broadcast_agent_obj.set_port(78809);
+	REQUIRE(true == udp_broadcast_agent_obj.init());
+	thread th0(send_broadcast_thread);
+	thread th1(recv_broadcast_thread);
+	th0.join();
+	th1.join();
+}

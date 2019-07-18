@@ -1,0 +1,52 @@
+#ifndef SRC_ZEG_ROBOT_BROADCAST_HPP_
+#define SRC_ZEG_ROBOT_BROADCAST_HPP_
+#include "base_thread.hpp"
+#include "zeg_robot_define.hpp"
+#include "zeg_config.hpp"
+#include "rpc_client.hpp"
+#include "codec.h"
+namespace zeg_robot_maintainence {
+using namespace rest_rpc;
+using namespace rest_rpc::rpc_service;
+class zeg_robot_navigation : public base_thread {
+public:
+	zeg_robot_navigation() : client_ptr_(new rpc_client) {
+		rpc_connected_ = false;
+	}
+	bool init() {
+		if (nullptr == client_ptr_) {
+			return false;
+		}
+		rpc_connected_ = client_ptr_->connect(zeg_config::zeg_config::get_instance().RPC_SERVER_IP, zeg_config::get_instance().RPC_SERVER_ROBOT_SIMULATOR_PORT, 5);
+		return true;
+	}
+	bool get_vehicle_ids() {
+		bool no_exception = true;
+		bool res = true;
+		if (false == rpc_connected_) {
+			rpc_connected_ = client_ptr_->connect(zeg_config::get_instance().RPC_SERVER_IP, zeg_config::get_instance().RPC_SERVER_ROBOT_SIMULATOR_PORT, 5);
+		}
+	    try {
+	    	res = client_ptr_->call<vector<string>>("report_pose", vehicle_.vehicle_cur_pose_);
+	    }
+	    catch (const std::exception& e) {
+	    	LOG_CRIT << e.what();
+	    	no_exception = false;
+	    }
+		return no_exception && res;
+	}
+protected:
+	virtual void process() override {
+		while (true) {
+			this_thread::sleep_for(chrono::microseconds(zeg_config::get_instance().robot_broadcast_interval));
+		}
+	}
+public:
+	unique_ptr<rpc_client>client_ptr_;
+private:
+	bool rpc_connected_;
+};
+}
+
+
+#endif /* SRC_ZEG_ROBOT_BROADCAST_HPP_ */

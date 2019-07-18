@@ -1,0 +1,16 @@
+#ifndef SRC_ZEG_ROBOT_DEFINE_HPP_
+#define SRC_ZEG_ROBOT_DEFINE_HPP_
+#include <stdint.h>
+#include <string>
+#include "msgpack.hpp"
+namespace zeg_robot_maintainence {
+using namespace std;
+struct robot_vehicle_id {
+	int vehicle_id;
+	uint64_t timestamp;
+	string protocol;
+	MSGPACK_DEFINE(vehicle_id, protocol);
+};
+}
+
+#endif /* SRC_ZEG_ROBOT_DEFINE_HPP_ */
