@@ -15,6 +15,8 @@
 #include "base_thread.hpp"
 #include "zeg_robot_update_address.hpp"
 #include "zeg_robot_task_escort.hpp"
+#include "http_server.hpp"
+#include "get_robot_location_response_handler.hpp"
 using namespace zeg_robot_scheduler_communication;
 TEST_CASE("testing init conf") {
 	CHECK(11000 == zeg_robot_config::get_instance().robot_rpc_scheduler_communication_port);
@@ -83,4 +85,10 @@ TEST_CASE("testing zeg_robot_task_escort") {
 	CHECK(str1 == task_id);
 	zeg_robot_task_escort::get().remove_robot_task(task_id);
 	CHECK(false == zeg_robot_task_escort::get().get_task_pack_str(task_id, str0));
+}
+TEST_CASE("testing url_mapper") {
+	string url = "/robot/location?id=007";
+	CHECK(ZEG_ROBOT_LOCATION == url_mapper::get().get_type(url));
+	url = "/robot/location1?id=007";
+	CHECK(UNKNOWN_ZEG_ROBOT_TYPE == url_mapper::get().get_type(url));
 }
