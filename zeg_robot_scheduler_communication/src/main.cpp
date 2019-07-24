@@ -2,10 +2,13 @@
 #include "zeg_robot_task_escort.hpp"
 #include "zeg_robot_udp_server.hpp"
 #include "zeg_robot_resend_task_thread.hpp"
+#include "zeg_robot_response_handler_info.hpp"
+#include "http_server.hpp"
 using namespace rest_rpc;
 using namespace rpc_service;
 using namespace zeg_robot_scheduler_communication;
 auto G_UDP_SEVER_PTR = message_communicate_entity_maker::make_unique_ptr("zeg.robot.udp.server");
+http_server G_HTTP_SERVER;
 bool init_udp_server() {
 	if (nullptr == G_UDP_SEVER_PTR) {
 		return false;
@@ -50,6 +53,17 @@ void end_resend_task_threads(vector<zeg_robot_resend_task_thread>&zeg_robot_rese
 		th.join();
 	}
 }
+bool start_http_server() {
+	zeg_robot_response_handler_info::get().init();
+	socket_config config;
+	config.port_ = 8888;
+	config.type_ = TCP;
+	if (false == G_HTTP_SERVER.init(config)) {
+		LOG_CRIT << "http server init failed...!";
+		return false;
+	}
+	return true;
+}
 int main() {
 	if (false == zeg_robot_config::get_instance().init()) {
 		LOG_CRIT << "zeg config init failed...!";
@@ -57,6 +71,9 @@ int main() {
 	}
 	if (false == init_udp_server()) {
 		LOG_CRIT << "zeg robot udp server init failed...!";
+		return -1;
+	}
+	if (false == start_http_server()) {
 		return -1;
 	}
 	vector<zeg_robot_resend_task_thread>zeg_robot_resend_task_threads;

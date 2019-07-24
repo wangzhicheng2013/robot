@@ -6,12 +6,13 @@ include_directories (
 	"../include/nanolog"
 	"../include/thread_pool"
 	"../include/rest_rpc"
+	"../include/iguana"
 	"/opt/boost_1_69_0"
 	"../include/msgpack"
 	"../include"
 )
 link_directories (${PROJECT_SOURCE_DIR}/libs)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -lrt -levent -ltcmalloc -pthread -std=c++17")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -lrt -ldl -levent -ltcmalloc -pthread -std=c++17")
 add_executable (zeg_robot_scheduler_communication ${SRC_LIST})
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 target_link_libraries (zeg_robot_scheduler_communication zmq event stdc++fs)

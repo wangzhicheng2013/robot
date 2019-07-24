@@ -7,6 +7,7 @@
 #include <thread>
 #include <chrono>
 #include <random>
+#include <string_view>
 #include <experimental/filesystem>
 #include "doctest.hpp"
 #include "common_utility.hpp"
@@ -15,13 +16,14 @@
 #include "base_thread.hpp"
 #include "zeg_robot_update_address.hpp"
 #include "zeg_robot_task_escort.hpp"
-#include "http_server.hpp"
-#include "get_robot_location_response_handler.hpp"
+#include "url_mapper.hpp"
+#include "zeg_robot_communicate_operation.hpp"
 using namespace zeg_robot_scheduler_communication;
 TEST_CASE("testing init conf") {
 	CHECK(11000 == zeg_robot_config::get_instance().robot_rpc_scheduler_communication_port);
 	CHECK(10000 == zeg_robot_config::get_instance().robot_rpc_tcs_port);
 	CHECK(7780 == zeg_robot_config::get_instance().udp_server_port);
+	CHECK(8888 == zeg_robot_config::get_instance().tcp_server_port);
 	CHECK(1 == zeg_robot_config::get_instance().robot_task_escort_sleep_interval);
 	CHECK(3 == zeg_robot_config::get_instance().robot_task_escort_try_cnt);
 	CHECK(10 == zeg_robot_config::get_instance().robot_task_escort_message_backlog);
@@ -91,4 +93,31 @@ TEST_CASE("testing url_mapper") {
 	CHECK(ZEG_ROBOT_LOCATION == url_mapper::get().get_type(url));
 	url = "/robot/location1?id=007";
 	CHECK(UNKNOWN_ZEG_ROBOT_TYPE == url_mapper::get().get_type(url));
+}
+struct person {
+	string name;
+	int age;
+};
+REFLECTION(person, name, age)
+TEST_CASE("testing iguana parse json") {
+	person p;
+	p.name = "hello";
+	p.age = 18;
+	iguana::string_stream ss;
+	iguana::json::to_json(ss, p);
+	cout << ss.str() << endl;
+	const char *str = "{\"name\":\"hello\",\"age\":18}";
+	CHECK(0 == ss.str().compare(str));
+
+	person p1;
+	iguana::json::from_json0(p1, str);
+	CHECK(18 == p1.age);
+	CHECK("hello" == p1.name);
+}
+TEST_CASE("testing parse_robot_get_location") {
+	string json = "{\"id\":\"007\",\"pointId\":\"uuid\"}";
+	zeg_robot_get_location get_location;
+	CHECK(true == zeg_robot_communicate_operation::get().parse_robot_get_location(json, get_location));
+	CHECK("007" == get_location.id);
+	CHECK("uuid" == get_location.pointId);
 }

@@ -10,14 +10,18 @@ public:
 		event_http_ptr_ = nullptr;
 	}
 	http_thread(const http_thread &other) {
-		sock_fd = other.sock_fd;
-		event_base_ptr_ = other.event_base_ptr_;
-		event_http_ptr_ = other.event_http_ptr_;
+		if (&other != this) {
+			sock_fd = other.sock_fd;
+			event_base_ptr_ = other.event_base_ptr_;
+			event_http_ptr_ = other.event_http_ptr_;
+		}
 	}
 	http_thread & operator = (const http_thread &other) {
-		sock_fd = other.sock_fd;
-		event_base_ptr_ = other.event_base_ptr_;
-		event_http_ptr_ = other.event_http_ptr_;
+		if (&other != this) {
+			sock_fd = other.sock_fd;
+			event_base_ptr_ = other.event_base_ptr_;
+			event_http_ptr_ = other.event_http_ptr_;
+		}
 		return *this;
 	}
 	~http_thread() {
@@ -68,8 +72,5 @@ private:
 	event_base *event_base_ptr_;
 	evhttp *event_http_ptr_;
 };
-
-
-
 
 #endif /* SRC_HTTP_THREAD_HPP_ */

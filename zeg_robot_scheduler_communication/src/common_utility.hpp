@@ -44,5 +44,46 @@ void kill_program(const char *program_name) {
 void make_uuid(string &uuid) {
 	uuid = sole::uuid0().str();
 }
-
+void get_url_key_val(const char *uri, vector<string>&keys, vector<string>&values) {
+	const char *p = uri;
+	while(*p) {
+		if('?' == *p) {
+			break;
+		}
+		p++;
+	}
+	if(0 == *p) {
+		return;
+	}
+	char tmp[1024] = "";
+	int loop = 0;
+	bool Get = false;
+	while(*p) {
+		if(*(p + 1) && !Get) {
+			sscanf(p + 1, "%[^= | &]", tmp);
+			if(strcmp(tmp, "")) {
+				Get = true;
+				if (!loop) {
+					keys.emplace_back(tmp);
+				}
+				else {
+					values.emplace_back(tmp);
+				}
+			}
+		}
+		p++;
+		if(0 == *p) {
+			break;
+		}
+		if(('=' == *p) || ('&' == *p)) {
+			if('=' == *p) {
+				loop = 1;
+			}
+			else {
+				loop = 0;
+			}
+			Get = false;
+		}
+	}
+}
 #endif /* SRC_COMMON_UTILITY_HPP_ */

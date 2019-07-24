@@ -13,7 +13,7 @@ namespace rest_rpc {
 	class req_result {
 	public:
 		req_result() = default;
-		req_result(string_view data) : data_(data) {}
+		req_result(string_view data) : data_(data.data(), data.length()) {}
 		bool success() const {
 			return !has_error(data_);
 		}
@@ -21,7 +21,7 @@ namespace rest_rpc {
 		template<typename T>
 		T as() {
 			if (has_error(data_)) {
-				throw std::logic_error("rpc error");
+				throw std::logic_error(get_error_msg(data_));
 			}
 
 			return get_result<T>(data_);
@@ -29,11 +29,12 @@ namespace rest_rpc {
 
 		void as() {
 			if (has_error(data_)) {
-				throw std::logic_error("rpc error");
+				throw std::logic_error(get_error_msg(data_));
 			}
 		}
+
 	private:
-		string_view data_;
+		std::string data_;
 	};
 
 	enum class CallModel {
@@ -46,14 +47,14 @@ namespace rest_rpc {
 
 	class rpc_client : private asio::noncopyable {
 	public:
-		rpc_client() : socket_(ios_), work_(ios_), strand_(ios_),
+		rpc_client() : socket_(ios_), work_(ios_), 
 			deadline_(ios_), body_(INIT_BUF_SIZE) {
 			thd_ = std::make_shared<std::thread>([this] {
 				ios_.run();
 			});
 		}
 
-		rpc_client(const std::string& host, unsigned short port) : socket_(ios_), work_(ios_), strand_(ios_),
+		rpc_client(const std::string& host, unsigned short port) : socket_(ios_), work_(ios_), 
 			deadline_(ios_), host_(host), port_(port), body_(INIT_BUF_SIZE) {
 			thd_ = std::make_shared<std::thread>([this] {
 				ios_.run();
@@ -69,8 +70,8 @@ namespace rest_rpc {
             thd_->join();
 		}
 
-		void set_connect_timeout(size_t seconds) {
-			connect_timeout_ = seconds;
+		void set_connect_timeout(size_t milliseconds) {
+			connect_timeout_ = milliseconds;
 		}
 
 		void set_reconnect_count(int reconnect_count) {
@@ -105,7 +106,7 @@ namespace rest_rpc {
                     async_reconnect();
 				}
 				else {
-				    std::cout<<"connected ok"<<std::endl;
+				    //std::cout<<"connected ok"<<std::endl;
 					has_connected_ = true;
 					do_read();
 
@@ -118,10 +119,13 @@ namespace rest_rpc {
 		void async_reconnect(){
             reset_socket();
             async_connect();
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(connect_timeout_));
 		}
 
 		bool connect(size_t timeout = 1) {
+			if (has_connected_)
+				return true;
+
 			assert(port_ != 0);
 			async_connect();
 			return wait_conn(timeout);
@@ -153,7 +157,7 @@ namespace rest_rpc {
             has_wait_ = true;
 			std::unique_lock<std::mutex> lock(conn_mtx_);
 			bool result = conn_cond_.wait_for(lock, std::chrono::seconds(timeout),
-				[this] {return has_connected_; });
+				[this] {return has_connected_.load(); });
             has_wait_ = false;
 			return has_connected_;
 		}
@@ -175,6 +179,10 @@ namespace rest_rpc {
 
 		void set_error_callback(std::function<void(boost::system::error_code)> f) {
 			err_cb_ = std::move(f);
+		}
+
+		uint64_t reqest_id() {
+			return temp_req_id_;
 		}
 
 		//sync call
@@ -235,32 +243,39 @@ namespace rest_rpc {
 
 		template<CallModel model, typename... Args>
 		std::future<req_result> async_call(const std::string& rpc_name, Args&&... args) {
-			req_id_++;
-			auto future = get_future();
+			auto p = std::make_shared<std::promise<req_result>>();
+			std::future<req_result> future = p->get_future();
+
+			uint64_t fu_id = 0;
+			{
+				std::unique_lock<std::mutex> lock(cb_mtx_);
+				fu_id_++;
+				fu_id = fu_id_;
+				future_map_.emplace(fu_id, std::move(p));
+			}
+
 			msgpack_codec codec;
 			auto ret = codec.pack_args(rpc_name, std::forward<Args>(args)...);
-			write(req_id_, std::move(ret));
+			write(fu_id, std::move(ret));
 			return future;
 		}
 
 		template<size_t TIMEOUT = DEFAULT_TIMEOUT, typename... Args>
 		void async_call(const std::string& rpc_name, std::function<void(boost::system::error_code, string_view)> cb, Args&& ... args) {
-			callback_id_++;
-			callback_id_ |= (uint64_t(1) << 63);
-			auto cb_id = callback_id_;
-#if __cplusplus == 201103L
-			strand_.post([this, cb_id, cb]() mutable {
-				callback_map_.emplace(cb_id, std::make_unique<call_t>(ios_, this, cb_id, std::move(cb), TIMEOUT));
-			});
-#else
-			strand_.post([this, cb_id, cb = std::move(cb)]() mutable {
-				callback_map_.emplace(cb_id, std::make_unique<call_t>(ios_, this, cb_id, std::move(cb), TIMEOUT));
-			});
-#endif
+			uint64_t cb_id = 0;
+			{
+				std::unique_lock<std::mutex> lock(cb_mtx_);
+				callback_id_++;
+				callback_id_ |= (uint64_t(1) << 63);
+				cb_id = callback_id_;
+				auto call = std::make_shared<call_t>(ios_, std::move(cb), TIMEOUT);
+				call->start_timer();
+				callback_map_.emplace(cb_id, call);
+			}
 
 			msgpack_codec codec;
 			auto ret = codec.pack_args(rpc_name, std::forward<Args>(args)...);
-			write(callback_id_, std::move(ret));
+			write(cb_id, std::move(ret));
 		}
 
 		bool has_connected() const {
@@ -290,46 +305,46 @@ namespace rest_rpc {
 			size_t size = message.size();
 			assert(size < MAX_BUF_LEN);
 			message_type msg{ {message.release(), size}, req_id };
-			strand_.post([this, msg] {
-				outbox_.emplace_back(std::move(msg));
-				if (outbox_.size() > 1) {
-					// outstanding async_write
-					return;
-				}
 
-				this->write();
-			});
+			std::unique_lock<std::mutex> lock(write_mtx_);
+			outbox_.emplace_back(std::move(msg));
+			if (outbox_.size() > 1) {
+				// outstanding async_write
+				return;
+			}
+
+			write();
 		}
 
 		void write() {
 			auto& msg = outbox_[0];
-			size_t write_len = msg.first.length();
+			write_size_ = (uint32_t)msg.first.length();
 			std::array<boost::asio::const_buffer, 3> write_buffers;
-			write_buffers[0] = boost::asio::buffer(&write_len, sizeof(int32_t));
+			write_buffers[0] = boost::asio::buffer(&write_size_, sizeof(int32_t));
 			write_buffers[1] = boost::asio::buffer(&msg.second, sizeof(uint64_t));
-			write_buffers[2] = boost::asio::buffer((char*)msg.first.data(), write_len);
+			write_buffers[2] = boost::asio::buffer((char*)msg.first.data(), write_size_);
 
 			boost::asio::async_write(socket_, write_buffers,
-				strand_.wrap([this](const boost::system::error_code& ec, const size_t length) {
-				::free((char*)outbox_.front().first.data());
-				outbox_.pop_front();
-
+				[this](const boost::system::error_code& ec, const size_t length) {
 				if (ec) {
 					has_connected_ = false;
-                    close();
-					if (err_cb_) { 
-						err_cb_(ec); 
+					close();
+					if (err_cb_) {
+						err_cb_(ec);
 					}
 
 					return;
 				}
 
+				std::unique_lock<std::mutex> lock(write_mtx_);
+				::free((char*)outbox_.front().first.data());
+				outbox_.pop_front();
+
 				if (!outbox_.empty()) {
 					// more messages to send
 					this->write();
 				}
-			})
-			);
+			});
 		}
 
 		void do_read() {
@@ -397,26 +412,16 @@ namespace rest_rpc {
 			});
 		}
 
-		std::future<req_result> get_future() {
-			auto p = std::make_shared<std::promise<req_result>>();
-			
-			std::future<req_result> future = p->get_future();
-#if __cplusplus == 201103L
-			strand_.post([this, p]() mutable {
-				future_map_.emplace(req_id_, std::move(p));
-			});
-#else
-			strand_.post([this, p = std::move(p)]() mutable {
-				future_map_.emplace(req_id_, std::move(p));
-			});	
-#endif
-			return future;
-		}
-
 		void call_back(uint64_t req_id, const boost::system::error_code& ec, string_view data) {
+			temp_req_id_ = req_id;
 			auto cb_flag = req_id >> 63;
 			if (cb_flag) {
-				auto& cl = callback_map_[req_id];
+				std::shared_ptr<call_t> cl = nullptr;
+				{
+					std::unique_lock<std::mutex> lock(cb_mtx_);
+					cl = std::move(callback_map_[req_id]);
+				}
+
 				assert(cl);
 				if (!cl->has_timeout()) {
 					cl->cancel();
@@ -426,42 +431,44 @@ namespace rest_rpc {
 					cl->callback(asio::error::make_error_code(asio::error::timed_out), {});
 				}
 
-				strand_.post([this, req_id]() {
-					callback_map_.erase(req_id);
-				});
+				std::unique_lock<std::mutex> lock(cb_mtx_);
+				callback_map_.erase(req_id);
 			}
 			else {
+				std::unique_lock<std::mutex> lock(cb_mtx_);
 				auto& f = future_map_[req_id];
 				if (ec) {
 					//LOG<<ec.message();
 					if (!f) {
-						std::cout << "invalid req_id" << std::endl;
+						//std::cout << "invalid req_id" << std::endl;
 						return;
 					}
 				}
 
 				assert(f);
 				f->set_value(req_result{ data });
-				strand_.post([this, req_id]() {
-					future_map_.erase(req_id);
-				});
+				future_map_.erase(req_id);
 			}
 		}
 
 		void clear_cache() {
-			strand_.post([this] {
+			{
+				std::unique_lock<std::mutex> lock(write_mtx_);
 				while (!outbox_.empty()) {
 					::free((char*)outbox_.front().first.data());
 					outbox_.pop_front();
 				}
-				future_map_.clear();
+			}
+
+			{
+				std::unique_lock<std::mutex> lock(cb_mtx_);
 				callback_map_.clear();
-			});
+				future_map_.clear();
+			}
 		}
 
         void reset_socket(){
             boost::system::error_code igored_ec;
-            socket_.shutdown(asio::ip::tcp::socket::shutdown_both, igored_ec);
             socket_.close(igored_ec);
             socket_ = decltype(socket_)(ios_);
             if(!socket_.is_open()){
@@ -469,16 +476,20 @@ namespace rest_rpc {
             }
         }
 
-		class call_t : asio::noncopyable {
+		class call_t : asio::noncopyable, public std::enable_shared_from_this<call_t> {
 		public:
-			call_t(asio::io_service& ios, rpc_client* client, uint64_t cb_id, std::function<void(boost::system::error_code, string_view)> cb, size_t timeout) : timer_(ios),
-				client_(client), cb_(std::move(cb)), timeout_(timeout){
+			call_t(asio::io_service& ios, std::function<void(boost::system::error_code, string_view)> cb, size_t timeout) : timer_(ios),
+				cb_(std::move(cb)), timeout_(timeout){
+			}
+
+			void start_timer() {
 				if (timeout_ == 0) {
 					return;
 				}
 
-				timer_.expires_from_now(std::chrono::milliseconds(timeout));
-				timer_.async_wait([this, cb_id](boost::system::error_code ec) {
+				timer_.expires_from_now(std::chrono::milliseconds(timeout_));
+				auto self = this->shared_from_this();
+				timer_.async_wait([this, self](boost::system::error_code ec) {
 					if (ec) {
 						return;
 					}
@@ -506,7 +517,6 @@ namespace rest_rpc {
 
 		private:
 			boost::asio::steady_timer timer_;
-			rpc_client* client_;
 			std::function<void(boost::system::error_code, string_view)> cb_;
 			size_t timeout_;
 			bool has_timeout_ = false;
@@ -515,15 +525,14 @@ namespace rest_rpc {
 		boost::asio::io_service ios_;
 		asio::ip::tcp::socket socket_;
 		boost::asio::io_service::work work_;
-		boost::asio::io_service::strand strand_;
 		std::shared_ptr<std::thread> thd_ = nullptr;
 
 		std::string host_;
 		unsigned short port_ = 0;
-		size_t connect_timeout_ = 2;//s
+		size_t connect_timeout_ = 2000;//s
 		size_t wait_timeout_ = 2;//s
 		int reconnect_cnt_ = -1;
-		bool has_connected_ = false;
+		std::atomic_bool has_connected_ = { false };
 		std::mutex conn_mtx_;
 		std::condition_variable conn_cond_;
 		bool has_wait_ = false;
@@ -531,12 +540,17 @@ namespace rest_rpc {
 		asio::steady_timer deadline_;
 
 		std::deque<message_type> outbox_;
-		uint64_t req_id_ = 0;
+		uint32_t write_size_ = 0;
+		std::mutex write_mtx_;
+		uint64_t fu_id_ = 0;
 		std::function<void(boost::system::error_code)> err_cb_;
 
 		std::unordered_map<std::uint64_t, std::shared_ptr<std::promise<req_result>>> future_map_;
-		std::unordered_map<std::uint64_t, std::unique_ptr<call_t>> callback_map_;
+		std::unordered_map<std::uint64_t, std::shared_ptr<call_t>> callback_map_;
+		std::mutex cb_mtx_;
 		uint64_t callback_id_ = 0;
+
+		uint64_t temp_req_id_ = 0;
 
 		char head_[HEAD_LEN] = {};
 		std::vector<char> body_;

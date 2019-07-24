@@ -46,7 +46,8 @@ namespace rest_rpc {
 				write();
 			}
 
-			void pack_and_response(uint64_t req_id, std::string data) {
+			template<typename T>
+			void pack_and_response(uint64_t req_id, T data) {
 				auto result = msgpack_codec::pack_args_str(result_code::OK, std::move(data));
 				response(req_id, std::move(result));
 			}
@@ -63,6 +64,18 @@ namespace rest_rpc {
 			void set_conn_id(int64_t id) { conn_id_ = id; }
 
 			int64_t conn_id() const { return conn_id_; }
+
+			const std::vector<char>& body() const {
+				return body_;
+			}
+
+			std::string remote_address() const {
+				if (has_closed_) {
+					return "";
+				}
+
+				return socket_.remote_endpoint().address().to_string();
+			}
 
 		private:
 			void read_head() {
@@ -126,11 +139,11 @@ namespace rest_rpc {
 
 			void write() {
 				auto& pair = write_queue_.front();
-				auto size = pair.second->size();
+				write_size_ = (uint32_t)pair.second->size();
 				std::array<boost::asio::const_buffer, 3> write_buffers;
-				write_buffers[0] = boost::asio::buffer(&size, sizeof(uint32_t));
+				write_buffers[0] = boost::asio::buffer(&write_size_, sizeof(uint32_t));
 				write_buffers[1] = boost::asio::buffer(&pair.first, sizeof(uint64_t));
-				write_buffers[2] = boost::asio::buffer(pair.second->data(), size);
+				write_buffers[2] = boost::asio::buffer(pair.second->data(), write_size_);
 
 				auto self = this->shared_from_this();
 				boost::asio::async_write(
@@ -162,7 +175,7 @@ namespace rest_rpc {
 
 				auto self(this->shared_from_this());
 				timer_.expires_from_now(std::chrono::seconds(timeout_seconds_));
-				timer_.async_wait([this, self](const boost::system::error_code & ec) {
+				timer_.async_wait([this, self](const boost::system::error_code& ec) {
 					if (has_closed()) { return; }
 
 					if (ec) { return; }
@@ -184,6 +197,7 @@ namespace rest_rpc {
 			std::uint64_t req_id_;
 
 			std::deque<std::pair<uint64_t, std::shared_ptr<std::string>>> write_queue_;
+			uint32_t write_size_ = 0;
 			std::mutex write_mtx_;
 
 			asio::steady_timer timer_;

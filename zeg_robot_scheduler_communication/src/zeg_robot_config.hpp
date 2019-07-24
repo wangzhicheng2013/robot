@@ -28,6 +28,7 @@ public:
 			return;
 		}
 		get_udp_server_config();
+		get_tcp_server_config();
 		get_rpc_config();
 		get_robot_task_escort_config();
 	}
@@ -44,6 +45,15 @@ private:
         if (udp_server_port <= 0) {
             LOG_INFO << "udp_server_port will be set 7780";
             udp_server_port = 7780;
+        }
+    }
+    inline void get_tcp_server_config() {
+        vector<string>values{""};
+        config_parser::config_parser::get_instance().get_value("tcp_server", "port", values);
+        tcp_server_port = atoi(values[0].c_str());
+        if (tcp_server_port <= 0) {
+            LOG_INFO << "tcp_server_port will be set 8888";
+            tcp_server_port = 8888;
         }
     }
 	inline void get_rpc_config() {
@@ -92,6 +102,7 @@ private:
 	static zeg_robot_config config_;
 public:
 	int udp_server_port;
+	int tcp_server_port;
 	int robot_rpc_scheduler_communication_port;
 	int robot_rpc_tcs_port;
 

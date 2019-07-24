@@ -2,7 +2,6 @@
 #define SRC_HTTP_SERVER_HPP_
 #include <vector>
 #include <thread>
-#include "socket_utility.hpp"
 #include "http_thread.hpp"
 class http_server {
 public:
