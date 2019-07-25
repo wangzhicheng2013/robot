@@ -9,9 +9,11 @@ public:
 	zeg_robot_location_query_response_handler() = default;
 	virtual ~zeg_robot_location_query_response_handler() = default;
 	virtual void handle_request(http_config &config) override {
-		string str = "{\"id\":\"007\",\"pointId\":\"uuid\"}";
-		config.response_body = str;
-		config.response_code = HTTP_200;
+		LOG_INFO << "request url = " << config.url;
+		LOG_INFO << "request body = " << config.request_body;
+		zeg_robot_communicate_operation::get().robot_get_location_process(config);
+		LOG_INFO << "reponse body = " << config.response_body;
+		LOG_INFO << "reponse code = " << config.response_code;
 	}
 };
 }

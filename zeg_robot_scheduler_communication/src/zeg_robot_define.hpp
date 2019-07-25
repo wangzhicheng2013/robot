@@ -111,6 +111,9 @@ struct zeg_robot_command_unpack_struct {
 	int unpack_len;
 	size_t unpack_offset;
 };
+namespace rest_error_codes {
+	static const unsigned int PROCESS_FAILED = 400;
+}
 }
 
 #endif /* SRC_ZEG_ROBOT_DEFINE_H_ */

@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include "sole.hpp"
+#include "json.hpp"
 using namespace std;
 template <typename T>
 void merge_vector(const vector<T>&v0, vector<T>&v1) {
@@ -41,12 +42,12 @@ void kill_program(const char *program_name) {
 		cout << program_name << " end ok." << endl;
 	}
 }
-void make_uuid(string &uuid) {
+inline void make_uuid(string &uuid) {
 	uuid = sole::uuid0().str();
 }
 void get_url_key_val(const char *uri, vector<string>&keys, vector<string>&values) {
 	const char *p = uri;
-	while(*p) {
+	while (*p) {
 		if('?' == *p) {
 			break;
 		}
@@ -58,10 +59,10 @@ void get_url_key_val(const char *uri, vector<string>&keys, vector<string>&values
 	char tmp[1024] = "";
 	int loop = 0;
 	bool Get = false;
-	while(*p) {
-		if(*(p + 1) && !Get) {
+	while (*p) {
+		if (*(p + 1) && !Get) {
 			sscanf(p + 1, "%[^= | &]", tmp);
-			if(strcmp(tmp, "")) {
+			if (strcmp(tmp, "")) {
 				Get = true;
 				if (!loop) {
 					keys.emplace_back(tmp);
@@ -72,11 +73,11 @@ void get_url_key_val(const char *uri, vector<string>&keys, vector<string>&values
 			}
 		}
 		p++;
-		if(0 == *p) {
+		if (0 == *p) {
 			break;
 		}
-		if(('=' == *p) || ('&' == *p)) {
-			if('=' == *p) {
+		if (('=' == *p) || ('&' == *p)) {
+			if ('=' == *p) {
 				loop = 1;
 			}
 			else {
@@ -86,4 +87,15 @@ void get_url_key_val(const char *uri, vector<string>&keys, vector<string>&values
 		}
 	}
 }
+template <typename T>
+inline void serialize_to_json(const T &obj, string &json) {
+	iguana::string_stream ss;
+	iguana::json::to_json(ss, obj);
+	json = ss.str();
+}
+template <typename T>
+inline bool deserialize_from_json(const string &json, T &obj) {
+	return iguana::json::from_json(obj, json.data(), json.length());
+}
+
 #endif /* SRC_COMMON_UTILITY_HPP_ */

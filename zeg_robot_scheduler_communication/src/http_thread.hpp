@@ -64,8 +64,9 @@ public:
 	}
 private:
 	static void http_call_back_fun(struct evhttp_request *req, void *arg) {
-		http_utility::get().set_http_utility(req);
-		http_utility::get().handle_http();
+		http_config config;
+		http_utility::get().set_http_utility(req, config);
+		http_utility::get().handle_http(config);
 	}
 private:
 	int sock_fd;
