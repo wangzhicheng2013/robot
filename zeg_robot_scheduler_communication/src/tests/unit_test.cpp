@@ -18,6 +18,8 @@
 #include "zeg_robot_task_escort.hpp"
 #include "url_mapper.hpp"
 #include "zeg_robot_communicate_operation.hpp"
+#include "zeg_robot_network_message_exception_logger.hpp"
+#include "common_events.hpp"
 using namespace zeg_robot_scheduler_communication;
 TEST_CASE("testing init conf") {
 	CHECK(11000 == zeg_robot_config::get_instance().robot_rpc_scheduler_communication_port);

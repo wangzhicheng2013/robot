@@ -38,6 +38,22 @@ bool report_task_to_robot(rpc_conn conn, const zeg_robot_header &header, const z
 	}
 	return true;
 }
+bool report_point_lock_ack_to_robot(rpc_conn conn, const zeg_robot_header &header, const zeg_robot_point_lock_ack &point_lock_ack) {
+	string pack_str;
+	zeg_robot_command_pack<zeg_robot_point_lock_ack>::get_instance().pack(header, point_lock_ack, pack_str);
+	auto client_ptr = zeg_robot_update_address::get().get(header.robot_id);
+	if (nullptr == client_ptr) {
+		LOG_CRIT << "robot id = " << header.robot_id << " get client address failed.";
+		return false;
+	}
+	int size = reinterpret_cast<zeg_robot_udp_server *>(G_UDP_SEVER_PTR.get())->send_to_client(pack_str.c_str(), pack_str.size(), *client_ptr);
+	LOG_INFO << "send task to robot id = " << header.robot_id << " robot ip = " << inet_ntoa(client_ptr->sin_addr) << ":" << client_ptr->sin_port;
+	LOG_INFO << "robot id = " << header.robot_id << " send zeg robot point_lock_ack size = " << size;
+	if (pack_str.size() != size) {
+		LOG_CRIT << "send size = " << size << " need send size = " << pack_str.size();
+	}
+	return true;
+}
 void start_resend_task_threads(vector<zeg_robot_resend_task_thread>&zeg_robot_resend_task_threads) {
 	int size = zeg_robot_config::get_instance().robot_task_escort_threads;
 	for (int i = 0;i < size;i++) {
@@ -80,6 +96,7 @@ int main() {
 	start_resend_task_threads(zeg_robot_resend_task_threads);
 	rpc_server server(zeg_robot_config::get_instance().robot_rpc_scheduler_communication_port, thread::hardware_concurrency(), 0, 1);
 	server.register_handler("report_task_to_robot", report_task_to_robot);
+	server.register_handler("report_point_lock_ack_to_robot", report_point_lock_ack_to_robot);
 	server.run();
 	end_resend_task_threads(zeg_robot_resend_task_threads);
 
