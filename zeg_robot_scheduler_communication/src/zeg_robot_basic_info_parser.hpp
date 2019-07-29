@@ -3,6 +3,7 @@
 #include "zeg_robot_command_parser_maker.hpp"
 #include "zeg_robot_command_pack.hpp"
 #include "zeg_robot_update_address.hpp"
+#include "zeg_robot_network_message_exception_reporter.hpp"
 namespace zeg_robot_scheduler_communication {
 class zeg_robot_basic_info_parser : public zeg_robot_command_parser {
 public:
@@ -19,6 +20,7 @@ public:
 			return false;
 		}
 		LOG_INFO << "zeg robot basic info parse ok.";
+		zeg_robot_network_message_exception_reporter::get().report_exception(*(unpack_cmd->unpack_header));
 		auto client_ptr = static_cast<struct sockaddr_in *>(arg.client_addr);
 		if (client_ptr != nullptr) {
 			zeg_robot_update_address::get().update(unpack_cmd->unpack_header->robot_id, *(client_ptr));

@@ -18,8 +18,7 @@
 #include "zeg_robot_task_escort.hpp"
 #include "url_mapper.hpp"
 #include "zeg_robot_communicate_operation.hpp"
-#include "zeg_robot_network_message_exception_logger.hpp"
-#include "common_events.hpp"
+#include "zeg_robot_network_message_exception_reporter.hpp"
 using namespace zeg_robot_scheduler_communication;
 TEST_CASE("testing init conf") {
 	CHECK(11000 == zeg_robot_config::get_instance().robot_rpc_scheduler_communication_port);
@@ -198,4 +197,11 @@ TEST_CASE("testing robot_task_termination_process") {
 	zeg_robot_communicate_operation::get().robot_task_termination_process(config);
 	CHECK(rest_error_codes::PROCESS_FAILED == config.response_code);
 	CHECK(true == config.response_body.empty());
+}
+TEST_CASE("testing zeg_robot_network_message_exception_reporter") {
+	zeg_robot_header header;
+	header.timestamp = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count() - 100;
+	CHECK(true == zeg_robot_network_message_exception_reporter::get().report_exception(header));
+	header.timestamp = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
+	CHECK(false == zeg_robot_network_message_exception_reporter::get().report_exception(header));
 }
