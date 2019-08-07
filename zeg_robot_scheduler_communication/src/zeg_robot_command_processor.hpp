@@ -36,7 +36,7 @@ public:
 			res = parser->parse(&unpack_struct, arg);
 		}
 		catch(const std::exception &e) {
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 			return false;
 		}
 		return res;

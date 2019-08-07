@@ -16,11 +16,13 @@ public:
 			obj.convert(&basic_info);
 		}
 		catch(const std::exception &e) {
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 			return false;
 		}
 		LOG_INFO << "zeg robot basic info parse ok.";
-		zeg_robot_network_message_exception_reporter::get().report_exception(*(unpack_cmd->unpack_header));
+/*		if (true == zeg_robot_network_message_exception_reporter::get().report_exception(*(unpack_cmd->unpack_header))) {
+			return false;
+		}*/
 		auto client_ptr = static_cast<struct sockaddr_in *>(arg.client_addr);
 		if (client_ptr != nullptr) {
 			zeg_robot_update_address::get().update(unpack_cmd->unpack_header->robot_id, *(client_ptr));
@@ -43,7 +45,7 @@ public:
 		catch (std::exception &e) {
 			connected = false;
 			succ = false;
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 		}
 		return succ;
 	}

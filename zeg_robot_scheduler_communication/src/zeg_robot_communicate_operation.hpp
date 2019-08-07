@@ -45,7 +45,7 @@ public:
 		}
 		catch (std::exception &e) {
 			connected = false;
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 		}
 		if (false == get_location.pointId.empty()) {
 			serialize_to_json(get_location, config.response_body);
@@ -67,7 +67,7 @@ public:
 		catch (std::exception &e) {
 			succ = false;
 			connected = false;
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 		}
 		if (false == succ) {
 			config.response_code = rest_error_codes::PROCESS_FAILED;
@@ -89,7 +89,7 @@ public:
 		}
 		catch (std::exception &e) {
 			connected = false;
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 		}
 		task_assignment_result.id = task_assignment.id;
 		if (true == res.first) {
@@ -115,7 +115,7 @@ public:
 		catch (std::exception &e) {
 			succ = false;
 			connected = false;
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 		}
 		if (false == succ) {
 			config.response_code = rest_error_codes::PROCESS_FAILED;

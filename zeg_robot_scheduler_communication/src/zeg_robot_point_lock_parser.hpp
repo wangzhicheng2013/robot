@@ -15,7 +15,7 @@ public:
 			obj.convert(&point_lock);
 		}
 		catch(const std::exception &e) {
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 			return false;
 		}
 		LOG_INFO << "zeg robot point lock parse ok.";
@@ -32,15 +32,15 @@ public:
 		}
 		bool succ = true;
 		try {
-			succ = client.call<bool>("report_point_lock_to_sheduler", *(unpack_cmd->unpack_header), point_lock);
+			succ = client.call<bool>("report_point_lock_to_scheduler", *(unpack_cmd->unpack_header), point_lock);
 			if (false == succ) {
-				LOG_CRIT << "report_point_lock_to_sheduler call rpc failed.";
+				LOG_CRIT << "report_point_lock_to_scheduler call rpc failed.";
 			}
 		}
 		catch (std::exception &e) {
 			connected = false;
 			succ = false;
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 		}
 		return succ;
 	}

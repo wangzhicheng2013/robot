@@ -32,9 +32,9 @@ public:
 		}
 		bool succ = true;
 		try {
-			succ = client.call<bool>("report_task_finish_to_sheduler", *(unpack_cmd->unpack_header), task_finish);
+			succ = client.call<bool>("report_task_finish_to_scheduler", *(unpack_cmd->unpack_header), task_finish);
 			if (false == succ) {
-				LOG_CRIT << "report_task_finish_to_sheduler call rpc failed.";
+				LOG_CRIT << "report_task_finish_to_scheduler call rpc failed.";
 			}
 		}
 		catch (std::exception &e) {

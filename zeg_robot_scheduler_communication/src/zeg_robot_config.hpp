@@ -43,8 +43,8 @@ private:
         config_parser::config_parser::get_instance().get_value("udp_server", "port", values);
         udp_server_port = atoi(values[0].c_str());
         if (udp_server_port <= 0) {
+        	udp_server_port = 7780;
             LOG_INFO << "udp_server_port will be set 7780";
-            udp_server_port = 7780;
         }
     }
     inline void get_tcp_server_config() {
@@ -52,8 +52,8 @@ private:
         config_parser::config_parser::get_instance().get_value("tcp_server", "port", values);
         tcp_server_port = atoi(values[0].c_str());
         if (tcp_server_port <= 0) {
+        	tcp_server_port = 8888;
             LOG_INFO << "tcp_server_port will be set 8888";
-            tcp_server_port = 8888;
         }
     }
 	inline void get_rpc_config() {
@@ -114,10 +114,10 @@ public:
 	const char *RPC_SERVER_IP = "127.0.0.1";
 	const uint32_t buffer_size = 1024;
 private:
-	const char *conf_path = "../etc/zeg_robot_scheduler_communication.conf";
-	const char *zeg_log_path = "/opt/log";
+	const char *conf_path = "../params/zeg_robot_scheduler_communication.conf";
+	const char *zeg_log_path = "/hontai/log";
 	const char *zeg_log_file = "zeg_robot_scheduler_communication_log";
-	const uint32_t max_log_size = 100;	// 100M
+	const uint32_t max_log_size = 10;	// 10M
 };
 zeg_robot_config zeg_robot_config::config_;
 }
