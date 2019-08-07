@@ -9,7 +9,7 @@ public:
 		static zeg_robot_command_pack obj;
 		return obj;
 	}
-	void pack(const zeg_robot_header &header, const cmd_type &cmd, string &str) {
+	inline void pack(const zeg_robot_header &header, const cmd_type &cmd, string &str) {
 		msgpack::sbuffer buffer_header;
 		msgpack::sbuffer buffer_body;
 		msgpack::pack(buffer_header, header);

@@ -26,6 +26,9 @@ public:
 		zeg_robot_header header;
 		try {
 			obj.convert(&header);
+			if (header.robot_id != zeg_robot_config::get_instance().robot_id) {
+				return false;
+			}
 			zeg_robot_command_unpack_struct unpack_struct(&msg, buf, &header, len, offset);
 			auto parser = zeg_robot_command_parser_maker::make_unique_ptr(header.type);
 			if (nullptr == parser) {
@@ -35,11 +38,8 @@ public:
 			res = parser->parse(&unpack_struct, ack_str);
 		}
 		catch(const std::exception &e) {
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 			return false;
-		}
-		if (header.robot_id != zeg_robot_config::get_instance().robot_id) {
-			res = false;
 		}
 		return res;
 	}

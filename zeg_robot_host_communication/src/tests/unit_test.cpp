@@ -22,7 +22,7 @@ namespace fs = experimental::filesystem;
 TEST_CASE("testing init conf") {
 	CHECK(9000 == zeg_robot_config::get_instance().robot_rpc_host_communication_port);
 	CHECK(7780 == zeg_robot_config::get_instance().udp_server_port);
-	CHECK(false == zeg_robot_config::get_instance().robot_id.empty());
+	CHECK(true == zeg_robot_config::get_instance().robot_id.empty());
 }
 class my_class {
 public:

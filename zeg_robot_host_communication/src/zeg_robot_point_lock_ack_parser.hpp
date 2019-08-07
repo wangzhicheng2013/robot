@@ -13,7 +13,7 @@ public:
 			obj.convert(&cmd);
 		}
 		catch(const std::exception &e) {
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 			return false;
 		}
 		LOG_INFO << cmd.task_id << " parse point lock ack ok.";
@@ -27,13 +27,14 @@ private:
 			connected = client.connect(1);
 		}
 		bool succ = true;
+		// todo core may fix by update rest rpc
 		try {
 			succ = client.call<bool>("report_point_lock_ack_to_robot", *(unpack_cmd->unpack_header), cmd);
 		}
 		catch (std::exception &e) {
 			connected = false;
 			succ = false;
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 		}
 		return succ;
 	}

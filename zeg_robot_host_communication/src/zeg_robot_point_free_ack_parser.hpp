@@ -13,29 +13,11 @@ public:
 			obj.convert(&cmd);
 		}
 		catch(const std::exception &e) {
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 			return false;
 		}
 		LOG_INFO << cmd.task_id << " parse point free ack ok.";
-		return call_report_point_free_ack_to_robot(unpack_cmd, cmd);
-	}
-private:
-	bool call_report_point_free_ack_to_robot(const zeg_robot_command_unpack_struct *unpack_cmd, const zeg_robot_point_free_ack &cmd) {
-		static rpc_client client(zeg_robot_config::zeg_robot_config::get_instance().RPC_SERVER_IP, zeg_robot_config::get_instance().robot_rpc_host_entity_port);
-		static bool connected = false;
-		if (false == connected) {
-			connected = client.connect(1);
-		}
-		bool succ = true;
-		try {
-			succ = client.call<bool>("report_point_free_ack_to_robot", *(unpack_cmd->unpack_header), cmd);
-		}
-		catch (std::exception &e) {
-			connected = false;
-			succ = false;
-			LOG_CRIT << e.what();
-		}
-		return succ;
+		return true;
 	}
 };
 REGISTER_COMMAND_PARSER_ENTITY(zeg_robot_point_free_ack_parser, "zeg.robot.point.free.ack");

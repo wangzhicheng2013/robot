@@ -14,7 +14,7 @@ public:
 			obj.convert(&task);
 		}
 		catch(const std::exception &e) {
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 			return false;
 		}
 		LOG_INFO << "zeg robot task parse ok.";
@@ -40,7 +40,7 @@ public:
 		catch (std::exception &e) {
 			connected = false;
 			succ = false;
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 		}
 		return succ;
 	}
