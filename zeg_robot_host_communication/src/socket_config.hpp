@@ -10,12 +10,14 @@ class socket_config {
 public:
 	socket_config() {
 		port_ = 7780;
+		broadcast_port_ = 7780;
 		backlog_ = 1024;
 		type_ = UDP;
 	}
 	virtual ~socket_config() = default;
 public:
 	int port_;
+	int broadcast_port_;
 	int backlog_;
 	unsigned char type_;
 };

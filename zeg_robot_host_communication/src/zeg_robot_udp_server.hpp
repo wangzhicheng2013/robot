@@ -10,7 +10,6 @@ public:
 	zeg_robot_udp_server() {
 		sock_fd_ = -1;
 		memset(&broadcast_addr_, 0, sizeof(broadcast_addr_));
-		make_broadcast_addr();
 	}
 	virtual ~zeg_robot_udp_server() {
 		for (auto &it : threads_) {
@@ -22,6 +21,7 @@ public:
 	}
 public:
 	inline bool init() override {
+		make_broadcast_addr();
 		return init(thread::hardware_concurrency());
 	}
 	void set_config(const socket_config &config) {
@@ -67,7 +67,7 @@ private:
 	}
 	inline void make_broadcast_addr() {
 		broadcast_addr_.sin_family = AF_INET;
-		broadcast_addr_.sin_port = htons(config_.port_);
+		broadcast_addr_.sin_port = htons(config_.broadcast_port_);
 		broadcast_addr_.sin_addr.s_addr = inet_addr("255.255.255.255");
 	}
 private:

@@ -19,7 +19,7 @@ public:
 			LOG_CRIT << "exception = " << e.what();
 			return false;
 		}
-		LOG_INFO << "zeg robot basic info parse ok.";
+		LOG_INFO << "zeg robot basic info parse ok. robot id = " << unpack_cmd->unpack_header->robot_id;
 /*		if (true == zeg_robot_network_message_exception_reporter::get().report_exception(*(unpack_cmd->unpack_header))) {
 			return false;
 		}*/

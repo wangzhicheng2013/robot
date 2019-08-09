@@ -49,7 +49,7 @@ private:
 				return;
 			}
 		}
-		call_report_robot_exception(robot_id);
+		call_report_robot_exception(robot_id, taskid_);
 	}
 	bool get_robot_id(string &robot_id) {
 		zeg_robot_header header;
@@ -62,7 +62,7 @@ private:
 		return true;
 
 	}
-	bool call_report_robot_exception(const string &robot_id) {
+	bool call_report_robot_exception(const string &robot_id, const string &task_id) {
 		static rpc_client client(zeg_robot_config::zeg_robot_config::get_instance().RPC_SERVER_IP, zeg_robot_config::get_instance().robot_rpc_tcs_port);
 		static bool connected = false;
 		if (false == connected) {
@@ -70,12 +70,12 @@ private:
 		}
 		bool succ = true;
 		try {
-			succ = client.call<bool>("report_robot_exception", robot_id);
+			succ = client.call<bool>("report_robot_exception", robot_id, task_id);
 		}
 		catch (std::exception &e) {
 			connected = false;
 			succ = false;
-			LOG_CRIT << e.what();
+			LOG_CRIT << "exception = " << e.what();
 		}
 		return succ;
 	}

@@ -49,7 +49,7 @@ bool report_robot_basic_info(rpc_conn conn, const zeg_robot_header &header, cons
 	get_robot_id(header);
 	zeg_robot_command_pack<zeg_robot_basic_info>::get_instance().pack(header, body, pack_str);
 	int size = reinterpret_cast<zeg_robot_udp_server *>(udp_server_ptr.get())->send_broadcast(pack_str.c_str(), pack_str.size());
-	LOG_INFO << "send robot basic info size = " << size;
+	LOG_INFO << "id = " << header.robot_id << " send robot basic info size = " << size;
 	if (pack_str.size() != size) {
 		LOG_CRIT << "send size = " << size << " need send size = " << pack_str.size();
 		return false;
@@ -62,6 +62,7 @@ bool init_udp_server() {
 	}
 	socket_config config;
 	config.port_ = zeg_robot_config::get_instance().udp_server_port;
+	config.broadcast_port_ = zeg_robot_config::get_instance().udp_server_broadcast_port;
 	reinterpret_cast<zeg_robot_udp_server *>(udp_server_ptr.get())->set_config(config);
 	if (false == udp_server_ptr->init()) {
 		return false;

@@ -56,7 +56,7 @@ protected:
 	event_base *base_;
 	event *event_;
 public:
-	static const int buffer_size = 1024;
+	static const int buffer_size = 128 * 1024;
 };
 
 
